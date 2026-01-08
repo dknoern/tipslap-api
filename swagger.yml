@@ -1,0 +1,691 @@
+paths:
+  /auth/request-code:
+    post:
+      tags:
+        - Authentication
+      summary: Request SMS verification code
+      description: Initiates SMS verification process using Twilio Verify API
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mobileNumber:
+                  type: string
+                  pattern: '^\+[1-9]\d{1,14}$'
+                  example: '+1234567890'
+                  description: Mobile number in E.164 format
+              required:
+                - mobileNumber
+      responses:
+        '200':
+          description: Verification code sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Verification code sent'
+                  status:
+                    type: string
+                    example: 'pending'
+        '400':
+          description: Invalid mobile number format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/verify-code:
+    post:
+      tags:
+        - Authentication
+      summary: Verify SMS code and authenticate
+      description: Verifies SMS code via Twilio Verify and returns JWT token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mobileNumber:
+                  type: string
+                  pattern: '^\+[1-9]\d{1,14}$'
+                  example: '+1234567890'
+                code:
+                  type: string
+                  pattern: '^\d{6}$'
+                  example: '123456'
+                  description: 6-digit verification code
+              required:
+                - mobileNumber
+                - code
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+                  user:
+                    $ref: '#/components/schemas/User'
+                  isNewUser:
+                    type: boolean
+                    example: false
+        '400':
+          description: Invalid code or mobile number
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid or expired verification code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users:
+    post:
+      tags:
+        - Users
+      summary: Create new user account
+      description: Creates a new user account with profile information and tip preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: string
+                  minLength: 2
+                  example: 'John Doe'
+                alias:
+                  type: string
+                  minLength: 3
+                  pattern: '^[a-zA-Z0-9_]+$'
+                  example: 'johndoe'
+                canGiveTips:
+                  type: boolean
+                  example: true
+                canReceiveTips:
+                  type: boolean
+                  example: true
+              required:
+                - fullName
+                - alias
+                - canGiveTips
+                - canReceiveTips
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'User created successfully'
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Alias already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/profile:
+    get:
+      tags:
+        - Users
+      summary: Get current user profile
+      description: Retrieves the authenticated user's profile information
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Users
+      summary: Update user profile
+      description: Updates the authenticated user's profile information
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: string
+                  minLength: 2
+                  example: 'John Smith'
+                alias:
+                  type: string
+                  minLength: 3
+                  pattern: '^[a-zA-Z0-9_]+$'
+                  example: 'johnsmith'
+                canGiveTips:
+                  type: boolean
+                  example: true
+                canReceiveTips:
+                  type: boolean
+                  example: false
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Profile updated successfully'
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Alias already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/avatar:
+    post:
+      tags:
+        - Users
+      summary: Upload user avatar
+      description: Uploads and updates the user's avatar image
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: Image file (JPEG or PNG, max 5MB)
+              required:
+                - avatar
+      responses:
+        '200':
+          description: Avatar uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Avatar uploaded successfully'
+                  avatarUrl:
+                    type: string
+                    example: 'https://tipslap-avatars.s3.amazonaws.com/user123.jpg'
+        '400':
+          description: Invalid file format or size
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/search:
+    get:
+      tags:
+        - Users
+      summary: Search for users
+      description: Search for users who can receive tips by name or alias
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: Search query for user name or alias
+          example: 'john'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 20
+          description: Maximum number of results to return
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        fullName:
+                          type: string
+                        alias:
+                          type: string
+                        avatarUrl:
+                          type: string
+                          nullable: true
+                  total:
+                    type: integer
+                    example: 5
+        '400':
+          description: Invalid search query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /transactions/balance:
+    get:
+      tags:
+        - Transactions
+      summary: Get account balance
+      description: Retrieves the current account balance for the authenticated user
+      responses:
+        '200':
+          description: Balance retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  balance:
+                    type: number
+                    format: decimal
+                    example: 125.50
+                  currency:
+                    type: string
+                    example: 'USD'
+
+  /transactions/history:
+    get:
+      tags:
+        - Transactions
+      summary: Get transaction history
+      description: Retrieves paginated transaction history for the authenticated user
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of transactions per page
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ['ADD_FUNDS', 'SEND_TIP', 'RECEIVE_TIP', 'WITHDRAW']
+          description: Filter by transaction type
+      responses:
+        '200':
+          description: Transaction history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                        example: 1
+                      limit:
+                        type: integer
+                        example: 20
+                      total:
+                        type: integer
+                        example: 45
+                      totalPages:
+                        type: integer
+                        example: 3
+
+  /transactions/tip:
+    post:
+      tags:
+        - Transactions
+      summary: Send a tip
+      description: Sends a tip from the authenticated user to another user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                receiverId:
+                  type: string
+                  example: '507f1f77bcf86cd799439011'
+                  description: ID of the user receiving the tip
+                amount:
+                  type: number
+                  format: decimal
+                  minimum: 0.01
+                  maximum: 500.00
+                  example: 15.00
+                  description: Tip amount in USD
+                description:
+                  type: string
+                  maxLength: 200
+                  example: 'Great service!'
+                  description: Optional tip description
+              required:
+                - receiverId
+                - amount
+      responses:
+        '201':
+          description: Tip sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Tip sent successfully'
+                  transaction:
+                    $ref: '#/components/schemas/Transaction'
+        '400':
+          description: Invalid tip amount or receiver
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '402':
+          description: Insufficient balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: User cannot give tips or receiver cannot receive tips
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /payments/create-payment-intent:
+    post:
+      tags:
+        - Payments
+      summary: Create payment intent for funding account
+      description: Creates a Stripe PaymentIntent for adding funds to user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: decimal
+                  minimum: 1.00
+                  maximum: 1000.00
+                  example: 50.00
+                  description: Amount to add to account in USD
+              required:
+                - amount
+      responses:
+        '200':
+          description: Payment intent created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clientSecret:
+                    type: string
+                    example: 'pi_1234567890_secret_abcdef'
+                    description: Client secret for Stripe payment confirmation
+                  paymentIntentId:
+                    type: string
+                    example: 'pi_1234567890'
+
+  /payments/create-payout:
+    post:
+      tags:
+        - Payments
+      summary: Create payout to bank account
+      description: Initiates a payout from user balance to their connected bank account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: decimal
+                  minimum: 1.00
+                  example: 25.00
+                  description: Amount to withdraw in USD
+              required:
+                - amount
+      responses:
+        '200':
+          description: Payout initiated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Payout initiated successfully'
+                  payoutId:
+                    type: string
+                    example: 'po_1234567890'
+                  estimatedArrival:
+                    type: string
+                    format: date
+                    example: '2023-12-25'
+        '400':
+          description: Invalid payout amount
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '402':
+          description: Insufficient balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /payments/setup-connected-account:
+    post:
+      tags:
+        - Payments
+      summary: Setup Stripe connected account
+      description: Creates or updates Stripe connected account for receiving payouts
+      responses:
+        '200':
+          description: Connected account setup initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accountLinkUrl:
+                    type: string
+                    example: 'https://connect.stripe.com/setup/...'
+                    description: URL to complete account setup
+                  accountId:
+                    type: string
+                    example: 'acct_1234567890'
+
+  /payments/account-status:
+    get:
+      tags:
+        - Payments
+      summary: Get connected account status
+      description: Retrieves the status of user's Stripe connected account
+      responses:
+        '200':
+          description: Account status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hasConnectedAccount:
+                    type: boolean
+                    example: true
+                  accountStatus:
+                    type: string
+                    enum: ['pending', 'enabled', 'disabled']
+                    example: 'enabled'
+                  canReceivePayouts:
+                    type: boolean
+                    example: true
+                  requiresAction:
+                    type: boolean
+                    example: false
+
+  /payments/webhook:
+    post:
+      tags:
+        - Payments
+      summary: Stripe webhook endpoint
+      description: Handles Stripe webhook events for payment processing
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Stripe webhook event payload
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    example: true
+        '400':
+          description: Invalid webhook signature or payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check endpoint
+      description: Returns the health status of the API
+      security: []
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'OK'
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: '2023-12-01T12:00:00.000Z'
+                  environment:
+                    type: string
+                    example: 'development'
+                  version:
+                    type: string
+                    example: 'v1'
+                  services:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                        example: 'connected'
+                      stripe:
+                        type: string
+                        example: 'connected'
+                      twilio:
+                        type: string
+                        example: 'connected'
+                      s3:
+                        type: string
+                        example: 'connected'

@@ -1,0 +1,94 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  mobileNumber    String   @unique
+  fullName        String
+  alias           String   @unique
+  canGiveTips     Boolean  @default(true)
+  canReceiveTips  Boolean  @default(true)
+  avatarUrl       String?
+  balance         Float    @default(0.00)
+  stripeCustomerId String? @unique
+  stripeAccountId  String? @unique  // For payouts
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  sentTransactions     Transaction[] @relation("Sender")
+  receivedTransactions Transaction[] @relation("Receiver")
+  stripeEvents         StripeEvent[]
+  verificationAttempts VerificationAttempt[]
+
+  @@map("users")
+}
+
+model Transaction {
+  id              String          @id @default(auto()) @map("_id") @db.ObjectId
+  type            TransactionType
+  amount          Float           
+  senderId        String?         @db.ObjectId
+  receiverId      String?         @db.ObjectId
+  status          TransactionStatus @default(COMPLETED)
+  description     String?
+  stripePaymentIntentId String?   // For funding transactions
+  stripePayoutId  String?         // For payout transactions
+  createdAt       DateTime        @default(now())
+  
+  // Relations
+  sender   User? @relation("Sender", fields: [senderId], references: [id])
+  receiver User? @relation("Receiver", fields: [receiverId], references: [id])
+
+  @@map("transactions")
+}
+
+model VerificationAttempt {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  mobileNumber String
+  status       String   // 'pending', 'approved', 'canceled'
+  createdAt    DateTime @default(now())
+  userId       String?  @db.ObjectId
+  
+  // Relations
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("verification_attempts")
+}
+
+model StripeEvent {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  stripeEventId String   @unique
+  eventType     String
+  processed     Boolean  @default(false)
+  userId        String?  @db.ObjectId
+  data          Json
+  createdAt     DateTime @default(now())
+  
+  // Relations
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("stripe_events")
+}
+
+enum TransactionType {
+  ADD_FUNDS
+  SEND_TIP
+  RECEIVE_TIP
+  WITHDRAW
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
