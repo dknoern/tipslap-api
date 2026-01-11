@@ -186,7 +186,7 @@ router.post(
 
 /**
  * GET /users/search
- * Search for users who can receive tips
+ * Search for users who can receive tips (excluding the calling user)
  */
 router.get(
   '/search',
@@ -197,8 +197,9 @@ router.get(
     const query = req.query['q'] as string;
     const page = parseInt(req.query['page'] as string) || 1;
     const limit = parseInt(req.query['limit'] as string) || 20;
+    const currentUserId = req.user!.id;
 
-    const users = await userService.searchUsers(query, page, limit);
+    const users = await userService.searchUsers(query, currentUserId, page, limit);
 
     res.json({
       success: true,

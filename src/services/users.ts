@@ -255,10 +255,11 @@ const userService = {
   },
 
   /**
-   * Search for users who can receive tips
+   * Search for users who can receive tips (excluding the calling user)
    */
   searchUsers: async (
     query: string,
+    excludeUserId: string,
     page: number = 1,
     limit: number = 20
   ): Promise<SearchResult[]> => {
@@ -266,9 +267,14 @@ const userService = {
     const effectiveLimit = Math.min(limit, 20);
     const skip = (page - 1) * effectiveLimit;
 
+    console.log('search query string: ',query);
+
     const users = await prisma.user.findMany({
       where: {
         canReceiveTips: true,
+        NOT: {
+          id: excludeUserId, // Exclude the calling user
+        },
         OR: [
           {
             alias: {
@@ -293,6 +299,8 @@ const userService = {
       skip,
       take: effectiveLimit,
     });
+
+    console.log('found users',JSON.stringify(users))
 
     return users.map(
       (user: {
