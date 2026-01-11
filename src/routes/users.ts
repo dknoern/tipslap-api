@@ -159,14 +159,14 @@ router.post(
       }
 
       // Upload new avatar
-      const avatarUrl = await s3Service.uploadAvatar(
+      const avatarKey = await s3Service.uploadAvatar(
         file.buffer,
         userId,
         file.mimetype
       );
 
-      // Update user with new avatar URL
-      const updatedUser = await userService.updateAvatar(userId, avatarUrl);
+      // Update user with new avatar key
+      const updatedUser = await userService.updateAvatar(userId, avatarKey);
 
       res.json({
         success: true,

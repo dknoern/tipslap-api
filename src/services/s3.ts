@@ -25,12 +25,12 @@ const s3Service = {
       Key: key,
       Body: file,
       ContentType: mimeType,
-      ACL: 'public-read',
     };
 
     try {
-      const result = await s3.upload(params).promise();
-      return result.Location;
+      await s3.upload(params).promise();
+      // Return the S3 key instead of the direct URL
+      return key;
     } catch (error) {
       console.error('S3 upload error:', error);
       throw new Error('UPLOAD_FAILED');
@@ -38,14 +38,23 @@ const s3Service = {
   },
 
   /**
+   * Generate a pre-signed URL for accessing an avatar
+   */
+  getAvatarUrl: (key: string): string => {
+    const params = {
+      Bucket: config.awsS3Bucket,
+      Key: key,
+      Expires: 3600, // URL expires in 1 hour
+    };
+
+    return s3.getSignedUrl('getObject', params);
+  },
+
+  /**
    * Delete avatar image from S3
    */
-  deleteAvatar: async (url: string): Promise<void> => {
+  deleteAvatar: async (key: string): Promise<void> => {
     try {
-      // Extract key from URL
-      const urlParts = url.split('/');
-      const key = urlParts.slice(-2).join('/'); // Get 'avatars/filename.ext'
-
       const params = {
         Bucket: config.awsS3Bucket,
         Key: key,

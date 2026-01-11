@@ -5,9 +5,20 @@ import {
   UserProfile,
 } from '../types/user';
 import stripeService from './stripe';
+import s3Service from './s3';
 import { logger } from '../utils/logger';
 
 const prisma = new PrismaClient();
+
+// Helper function to add avatar URL to result if available
+const addAvatarUrl = (result: any, avatarKey: string | null): void => {
+  if (avatarKey) {
+    const avatarUrl = s3Service.getAvatarUrl(avatarKey);
+    if (avatarUrl) {
+      result.avatarUrl = avatarUrl;
+    }
+  }
+};
 
 interface SearchResult {
   id: string;
@@ -89,9 +100,7 @@ const userService = {
       createdAt: user.createdAt,
     };
 
-    if (user.avatarUrl) {
-      result.avatarUrl = user.avatarUrl;
-    }
+    addAvatarUrl(result, user.avatarUrl);
 
     return result;
   },
@@ -119,9 +128,7 @@ const userService = {
       createdAt: user.createdAt,
     };
 
-    if (user.avatarUrl) {
-      result.avatarUrl = user.avatarUrl;
-    }
+    addAvatarUrl(result, user.avatarUrl);
 
     return result;
   },
@@ -151,9 +158,7 @@ const userService = {
       createdAt: user.createdAt,
     };
 
-    if (user.avatarUrl) {
-      result.avatarUrl = user.avatarUrl;
-    }
+    addAvatarUrl(result, user.avatarUrl);
 
     return result;
   },
@@ -219,20 +224,18 @@ const userService = {
       createdAt: user.createdAt,
     };
 
-    if (user.avatarUrl) {
-      result.avatarUrl = user.avatarUrl;
-    }
+    addAvatarUrl(result, user.avatarUrl);
 
     return result;
   },
 
   /**
-   * Update user avatar URL
+   * Update user avatar S3 key
    */
-  updateAvatar: async (id: string, avatarUrl: string): Promise<UserProfile> => {
+  updateAvatar: async (id: string, avatarKey: string): Promise<UserProfile> => {
     const user = await prisma.user.update({
       where: { id },
-      data: { avatarUrl },
+      data: { avatarUrl: avatarKey },
     });
 
     const result: UserProfile = {
@@ -246,9 +249,7 @@ const userService = {
       createdAt: user.createdAt,
     };
 
-    if (user.avatarUrl) {
-      result.avatarUrl = user.avatarUrl;
-    }
+    addAvatarUrl(result, user.avatarUrl);
 
     return result;
   },
@@ -306,9 +307,7 @@ const userService = {
           fullName: user.fullName,
         };
 
-        if (user.avatarUrl) {
-          result.avatarUrl = user.avatarUrl;
-        }
+        addAvatarUrl(result, user.avatarUrl);
 
         return result;
       }
