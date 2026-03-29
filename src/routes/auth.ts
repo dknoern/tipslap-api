@@ -15,6 +15,10 @@ import {
   createUnauthorizedError,
   createInternalServerError,
   createRateLimitError,
+  ApiError,
+  CredentialError,
+  ServiceTimeoutError,
+  ServiceUnavailableError,
 } from '../utils/errors';
 
 const router = Router();
@@ -82,7 +86,22 @@ router.post(
         },
       });
     } catch (error: any) {
-      // Handle specific error cases
+      // Handle credential configuration errors (500)
+      if (error instanceof CredentialError) {
+        throw createInternalServerError(error.message);
+      }
+
+      // Handle service timeout errors (503)
+      if (error instanceof ServiceTimeoutError) {
+        throw new ApiError(503, 'SERVICE_UNAVAILABLE', error.message);
+      }
+
+      // Handle service unavailability errors (503)
+      if (error instanceof ServiceUnavailableError) {
+        throw new ApiError(503, 'SERVICE_UNAVAILABLE', error.message);
+      }
+
+      // Handle specific error cases for invalid codes (401)
       if (
         error.message.includes('Invalid or expired') ||
         error.message.includes('verification failed') ||

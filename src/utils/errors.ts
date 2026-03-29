@@ -216,6 +216,51 @@ export const createExternalServiceError = (
 };
 
 /**
+ * Custom error for Twilio credential issues
+ */
+export class CredentialError extends Error {
+  constructor(message: string = 'Authentication service misconfigured - check Twilio credentials') {
+    super(message);
+    this.name = 'CredentialError';
+
+    // Maintains proper stack trace for where our error was thrown (only available on V8)
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, CredentialError);
+    }
+  }
+}
+
+/**
+ * Custom error for Twilio service timeout issues
+ */
+export class ServiceTimeoutError extends Error {
+  constructor(message: string = 'Authentication service timeout - Twilio API not responding') {
+    super(message);
+    this.name = 'ServiceTimeoutError';
+
+    // Maintains proper stack trace for where our error was thrown (only available on V8)
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, ServiceTimeoutError);
+    }
+  }
+}
+
+/**
+ * Custom error for Twilio service unavailability issues
+ */
+export class ServiceUnavailableError extends Error {
+  constructor(message: string = 'Authentication service temporarily unavailable') {
+    super(message);
+    this.name = 'ServiceUnavailableError';
+
+    // Maintains proper stack trace for where our error was thrown (only available on V8)
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, ServiceUnavailableError);
+    }
+  }
+}
+
+/**
  * Check if an error is an instance of ApiError
  */
 export const isApiError = (error: any): error is ApiError => {

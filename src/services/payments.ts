@@ -269,6 +269,8 @@ export const paymentsService = {
    */
   processSuccessfulPayment: async (paymentIntentId: string): Promise<void> => {
     try {
+      console.log('🔍 Looking for transaction with paymentIntentId:', paymentIntentId);
+      
       // Find the pending transaction
       const transaction = await prisma.transaction.findFirst({
         where: {
@@ -281,11 +283,36 @@ export const paymentsService = {
       });
 
       if (!transaction) {
+        console.log('⚠️ No pending transaction found for PaymentIntent:', paymentIntentId);
+        
+        // Let's also check if there are any transactions with this payment intent ID at all
+        const anyTransaction = await prisma.transaction.findFirst({
+          where: {
+            stripePaymentIntentId: paymentIntentId,
+          },
+        });
+        
+        if (anyTransaction) {
+          console.log('📋 Found transaction but not pending:', {
+            transactionId: anyTransaction.id,
+            status: anyTransaction.status,
+            amount: anyTransaction.amount
+          });
+        } else {
+          console.log('❌ No transaction found at all for this PaymentIntent');
+        }
+        
         logger.warn('Transaction not found for PaymentIntent', {
           paymentIntentId,
         });
         return;
       }
+
+      console.log('✅ Found pending transaction:', {
+        transactionId: transaction.id,
+        amount: transaction.amount,
+        receiverId: transaction.receiverId
+      });
 
       // Update transaction status
       await prisma.transaction.update({
@@ -293,15 +320,23 @@ export const paymentsService = {
         data: { status: 'COMPLETED' },
       });
 
+      console.log('✅ Transaction status updated to COMPLETED');
+
       // Update user balance
       if (transaction.receiverId) {
-        await prisma.user.update({
+        const updatedUser = await prisma.user.update({
           where: { id: transaction.receiverId },
           data: {
             balance: {
               increment: transaction.amount,
             },
           },
+        });
+        
+        console.log('💰 User balance updated:', {
+          userId: transaction.receiverId,
+          newBalance: updatedUser.balance,
+          amountAdded: transaction.amount
         });
       }
 
@@ -312,6 +347,7 @@ export const paymentsService = {
         userId: transaction.receiverId,
       });
     } catch (error) {
+      console.error('❌ Error processing successful payment:', error);
       logger.error(
         'Failed to process successful payment',
         error instanceof Error ? error : new Error('Unknown error')

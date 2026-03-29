@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { config } from '../config/environment';
 import twilioService from './twilio';
+import { CredentialError, ServiceTimeoutError, ServiceUnavailableError } from '../utils/errors';
 
 const prisma = new PrismaClient();
 
@@ -153,6 +154,21 @@ const authService = {
       };
     } catch (error) {
       console.error('Verify code error:', error);
+      
+      // Re-throw specific error types for proper handling in route handlers
+      if (error instanceof CredentialError) {
+        throw new CredentialError('Authentication service misconfigured - check Twilio credentials');
+      }
+      
+      if (error instanceof ServiceTimeoutError) {
+        throw new ServiceTimeoutError('Authentication service timeout - Twilio API not responding');
+      }
+      
+      if (error instanceof ServiceUnavailableError) {
+        throw new ServiceUnavailableError('Authentication service temporarily unavailable');
+      }
+      
+      // Preserve existing error handling for invalid codes and other errors
       if (error instanceof Error) {
         throw error;
       }

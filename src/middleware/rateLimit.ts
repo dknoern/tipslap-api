@@ -172,7 +172,7 @@ export const endpointRateLimit = rateLimit({
     if (req.path.includes('/transactions/tip')) return 20; // Tips per window
     if (req.path.includes('/users/avatar')) return 5; // Avatar uploads
     if (req.path.includes('/users/search')) return 100; // Search requests
-    if (req.path.includes('/payments/')) return 10; // Payment operations
+    if (req.path.includes('/payments/')) return 50; // Payment operations
 
     return 200; // Default for other endpoints
   },

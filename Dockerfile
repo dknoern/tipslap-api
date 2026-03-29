@@ -26,8 +26,6 @@ COPY package*.json ./
 COPY src ./src
 COPY prisma ./prisma
 COPY tsconfig.json ./
-COPY .eslintrc.json ./
-COPY .prettierrc ./
 
 # Generate Prisma client
 RUN npx prisma generate

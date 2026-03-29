@@ -163,6 +163,43 @@ See `.env.example` for all required environment variables. Key variables include
 - `POST /api/v1/payments/create-payout` - Create payout to user
 - `POST /api/v1/payments/webhook` - Stripe webhook handler
 
+## Stripe Webhook Forwarding (Local Development)
+
+To receive Stripe webhook events locally, use the Stripe CLI to forward events to your dev server.
+
+### Setup
+
+1. Install the Stripe CLI:
+   ```bash
+   # macOS
+   brew install stripe/stripe-cli/stripe
+
+   # Or download from https://docs.stripe.com/stripe-cli
+   ```
+
+2. Log in to your Stripe account:
+   ```bash
+   stripe login
+   ```
+
+3. Forward events to your local webhook endpoint:
+   ```bash
+   stripe listen --forward-to localhost:3000/api/v1/payments/webhook
+   ```
+
+4. The CLI will output a webhook signing secret (starts with `whsec_`). Update `STRIPE_WEBHOOK_SECRET` in your `.env.development` with this value.
+
+5. In a separate terminal, you can trigger test events:
+   ```bash
+   stripe trigger payment_intent.succeeded
+   ```
+
+### Notes
+
+- Keep `stripe listen` running in a terminal while developing payment flows.
+- The signing secret from `stripe listen` is different from the one in the Stripe Dashboard — use the CLI-provided one for local dev.
+- Add `--events payment_intent.succeeded,payment_intent.payment_failed` to filter specific event types.
+
 ## Docker Support
 
 Build and run with Docker:

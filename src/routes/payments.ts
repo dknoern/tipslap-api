@@ -9,6 +9,7 @@ import { asyncHandler } from '../middleware/errorHandler';
 import paymentsService from '../services/payments';
 import stripeService from '../services/stripe';
 import { logger } from '../utils/logger';
+import { config } from '../config/environment';
 import { PrismaClient } from '@prisma/client';
 import {
   createUserNotFoundError,
@@ -210,6 +211,12 @@ router.get(
 router.post('/webhook', async (req: Request, res: Response): Promise<void> => {
   const signature = req.headers['stripe-signature'] as string;
 
+  console.log('🔔 Webhook received!', {
+    hasSignature: !!signature,
+    bodyType: typeof req.body,
+    bodyLength: req.body?.length || 0
+  });
+
   if (!signature) {
     logger.warn('Missing Stripe signature header');
     res.status(400).json({
@@ -224,6 +231,12 @@ router.post('/webhook', async (req: Request, res: Response): Promise<void> => {
   try {
     // Construct the event using raw body
     const event = stripeService.constructWebhookEvent(req.body, signature);
+    
+    console.log('✅ Webhook event constructed successfully:', {
+      eventId: event.id,
+      eventType: event.type,
+      paymentIntentId: event.type.includes('payment_intent') ? event.data.object.id : 'N/A'
+    });
 
     // Check if we've already processed this event
     const existingEvent = await prisma.stripeEvent.findUnique({
@@ -246,13 +259,17 @@ router.post('/webhook', async (req: Request, res: Response): Promise<void> => {
       },
     });
 
+    console.log('💾 Event stored in database');
+
     // Process the event based on type
     switch (event.type) {
       case 'payment_intent.succeeded':
+        console.log('🎉 Processing successful payment...');
         await paymentsService.processSuccessfulPayment(event.data.object.id);
         break;
 
       case 'payment_intent.payment_failed':
+        console.log('❌ Processing failed payment...');
         await paymentsService.processFailedPayment(event.data.object.id);
         break;
 
@@ -273,6 +290,8 @@ router.post('/webhook', async (req: Request, res: Response): Promise<void> => {
       data: { processed: true },
     });
 
+    console.log('✅ Webhook event processed successfully');
+
     logger.info('Webhook event processed', {
       eventId: event.id,
       eventType: event.type,
@@ -280,6 +299,7 @@ router.post('/webhook', async (req: Request, res: Response): Promise<void> => {
 
     res.json({ received: true });
   } catch (error) {
+    console.error('❌ Webhook processing failed:', error);
     logger.error(
       'Webhook processing failed',
       error instanceof Error ? error : new Error('Unknown error')
