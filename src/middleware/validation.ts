@@ -232,10 +232,10 @@ export const searchUsersSchema = {
 // Transaction validation schemas
 export const sendTipSchema = {
   body: Joi.object({
-    recipientId: Joi.string().length(24).hex().required().messages({
-      'string.length': 'Recipient ID must be a valid ObjectId',
-      'string.hex': 'Recipient ID must be a valid ObjectId',
-      'any.required': 'Recipient ID is required',
+    receiverId: Joi.string().length(24).hex().required().messages({
+      'string.length': 'Receiver ID must be a valid ObjectId',
+      'string.hex': 'Receiver ID must be a valid ObjectId',
+      'any.required': 'Receiver ID is required',
     }),
     amount: Joi.number().positive().precision(2).max(500).required().messages({
       'number.positive': 'Amount must be greater than 0',
@@ -243,8 +243,8 @@ export const sendTipSchema = {
       'number.max': 'Amount must not exceed $500',
       'any.required': 'Amount is required',
     }),
-    message: Joi.string().max(200).trim().allow('').messages({
-      'string.max': 'Message must not exceed 200 characters',
+    description: Joi.string().max(200).trim().allow('').messages({
+      'string.max': 'Description must not exceed 200 characters',
     }),
   }),
 };

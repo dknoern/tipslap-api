@@ -72,7 +72,7 @@ router.get(
 /**
  * POST /transactions/tip
  * Send a tip to another user
- * Body: { recipientId: string, amount: number, message?: string }
+ * Body: { receiverId: string, amount: number, description?: string }
  */
 router.post(
   '/tip',
@@ -80,19 +80,19 @@ router.post(
   createValidationMiddleware(sendTipSchema),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const senderId = req.user!.id;
-    const { recipientId, amount, message } = req.body;
+    const { receiverId, amount, description } = req.body;
 
     // Prevent self-tipping
-    if (senderId === recipientId) {
+    if (senderId === receiverId) {
       throw createValidationError('Cannot send tip to yourself');
     }
 
     try {
       const result = await transactionService.sendTip(
         senderId,
-        recipientId,
+        receiverId,
         amount,
-        message
+        description
       );
 
       res.status(201).json({
