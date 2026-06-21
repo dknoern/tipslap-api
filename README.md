@@ -79,6 +79,12 @@ npm run dev
 
 The API will be available at `http://localhost:3000`
 
+Start the webhook listender locally:
+
+```
+stripe listen --forward-to localhost:3000/api/v1/payments/webhook 
+```
+
 ### Testing
 
 Run tests:
